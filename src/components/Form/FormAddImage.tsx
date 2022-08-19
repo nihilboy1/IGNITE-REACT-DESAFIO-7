@@ -7,6 +7,12 @@ import { api } from '../../services/api';
 import { FileInput } from '../Input/FileInput';
 import { TextInput } from '../Input/TextInput';
 
+interface NewImageData {
+  url: string;
+  title: string;
+  description: string;
+}
+
 interface FormAddImageProps {
   closeModal: () => void;
 }
@@ -53,13 +59,15 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
   const queryClient = useQueryClient();
   const mutation = useMutation(
     async (image: NewImageData) => {
-      await api.post("/api/images", {
+      await api.post('/api/images', {
         ...image,
-        url: imageUrl
-      })
+        url: imageUrl,
+      });
     },
     {
-      // TODO ONSUCCESS MUTATION
+      onSuccess: () => {
+        queryClient.invalidateQueries('images');
+      },
     }
   );
 
@@ -67,15 +75,37 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
     useForm();
   const { errors } = formState;
 
-  const onSubmit = async (data: Record<string, unknown>): Promise<void> => {
+  const onSubmit = async (data: NewImageData): Promise<void> => {
     try {
-      // TODO SHOW ERROR TOAST IF IMAGE URL DOES NOT EXISTS
-      // TODO EXECUTE ASYNC MUTATION
-      // TODO SHOW SUCCESS TOAST
+      if (!imageUrl) {
+        toast({
+          status: 'error',
+          title: 'Imagem não adicionada',
+          description:
+            'É preciso adicionar e aguardar o upload de uma imagem antes de realizar o cadastro.',
+        });
+
+        return;
+      }
+      await mutation.mutateAsync(data);
+      toast({
+        status: "success",
+        title: 'Imagem cadastrada',
+        description:
+          'Sua imagem foi cadastrada com sucesso.',
+      });
     } catch {
-      // TODO SHOW ERROR TOAST IF SUBMIT FAILED
+      toast({
+        status: 'error',
+        title: 'Falha no cadastro',
+        description:
+          'Ocorreu um erro ao tentar cadastrar sua imagem.',
+      });
     } finally {
-      // TODO CLEAN FORM, STATES AND CLOSE MODAL
+      reset()
+      setImageUrl("")
+      setLocalImageUrl("")
+      closeModal()
     }
   };
 
